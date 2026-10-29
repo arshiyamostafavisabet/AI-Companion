@@ -165,6 +165,10 @@ class Supervisor:
 
     async def _start(self, child: _Child) -> None:
         env = {**os.environ, **child.spec.env}
+
+        if child.spec.name == "llama":
+            env.pop("LD_LIBRARY_PATH", None)
+
         logger.info("[%s] starting: %s", child.spec.name, " ".join(child.spec.argv))
         child.process = await asyncio.create_subprocess_exec(
             *child.spec.argv,
