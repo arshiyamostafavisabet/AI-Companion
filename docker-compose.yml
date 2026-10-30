@@ -33,8 +33,8 @@ services:
       NEMOTRON_MODEL_ID: ${NEMOTRON_MODEL_ID:-nemotron-speech-streaming}
       NEMOTRON_FP16: ${NEMOTRON_FP16:-1}
       WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
-      TTS_VOICE: ${TTS_VOICE:-af_nova}
-      TTS_PROVIDER: ${TTS_PROVIDER:-kokoro}
+      #TTS_VOICE: ${TTS_VOICE:-af_nova}
+      #TTS_PROVIDER: ${TTS_PROVIDER:-kokoro}
       TURN_DETECTION: ${TURN_DETECTION:-multilingual}
       AGENT_IDLE_PROCESSES: ${AGENT_IDLE_PROCESSES:-}
       WAKE_WORD: ${WAKE_WORD:-}

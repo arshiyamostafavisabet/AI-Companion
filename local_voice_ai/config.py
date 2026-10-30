@@ -178,6 +178,9 @@ class Config:
     tts_bind_host: str = _DEFAULT_BIND_HOST
     manage_tts: bool = True
 
+    # --- TTS (Fish Audio) ------------------------------------------------
+    fish_tts_model: str = "s2.1-pro-free"  # "s2.1-pro" | "s2.1-pro-free"
+
     # --- Wake word (off by default) --------------------------------------
     # When enabled the agent joins deaf and only starts listening after the
     # wake phrase ("hey livekit") is detected on the user's microphone.
@@ -285,6 +288,7 @@ class Config:
             tts_base_url=tts_base_url,
             tts_voice=os.getenv("TTS_VOICE", cls.tts_voice),
             tts_api_key=os.getenv("TTS_API_KEY", cls.tts_api_key),
+            fish_tts_model=os.getenv("FISH_TTS_MODEL", cls.fish_tts_model),
             tts_bind_port=int(os.getenv("TTS_BIND_PORT", str(cls.tts_bind_port))),
             tts_bind_host=os.getenv("TTS_BIND_HOST", bind_host),
             manage_tts=_env_bool("MANAGE_TTS", _is_loopback(tts_base_url)),
@@ -323,6 +327,7 @@ class Config:
             "TTS_VOICE": self.tts_voice,
             "TTS_API_KEY": self.tts_api_key,
             "TURN_DETECTION": self.turn_detection,
+            "FISH_TTS_MODEL": self.fish_tts_model,  
         }
         if self.agent_idle_processes is not None:
             env["AGENT_IDLE_PROCESSES"] = str(self.agent_idle_processes)
