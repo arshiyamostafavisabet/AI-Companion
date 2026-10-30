@@ -9,6 +9,7 @@ correct for both single-image deployment and bare-metal local runs.
 import logging
 import os
 from typing import Any
+from .agent_instructions import REMIELLE_SYSTEM_PROMPT
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -37,15 +38,7 @@ load_dotenv(".env.local")
 class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions=(
-                "You are a helpful voice AI assistant. The user is interacting with you via "
-                "voice, even if you perceive the conversation as text. You eagerly assist "
-                "users with their questions by providing information from your extensive "
-                "knowledge. Your responses are concise, to the point, and without any "
-                "emojis, lists, or other special symbols. "
-                "Use short sentences so spoken audio can begin quickly. "
-                "You are curious, friendly, and have a sense of humor."
-            ),
+            instructions= REMIELLE_SYSTEM_PROMPT
         )
 
     @function_tool()
