@@ -9,6 +9,7 @@ correct for both single-image deployment and bare-metal local runs.
 import logging
 import os
 from typing import Any
+from .agent_instructions import JARVIS_SYS_PROMPT
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -37,15 +38,7 @@ load_dotenv(".env.local")
 class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions=(
-                "You are a helpful voice AI assistant. The user is interacting with you via "
-                "voice, even if you perceive the conversation as text. You eagerly assist "
-                "users with their questions by providing information from your extensive "
-                "knowledge. Your responses are concise, to the point, and without any "
-                "emojis, lists, or other special symbols. "
-                "Use short sentences so spoken audio can begin quickly. "
-                "You are curious, friendly, and have a sense of humor."
-            ),
+            instructions= JARVIS_SYS_PROMPT,
         )
 
     @function_tool()
@@ -106,6 +99,7 @@ async def my_agent(ctx: JobContext) -> None:
     stt_api_key = os.getenv("STT_API_KEY", "no-key-needed")
 
     tts_base_url = os.getenv("TTS_BASE_URL", "http://127.0.0.1:8880/v1")
+    fish_tts_model = os.getenv("FISH_TTS_MODEL", "s2.1-pro-free")
     tts_provider = os.getenv("TTS_PROVIDER", "kokoro").lower()
     tts_voice = os.getenv("TTS_VOICE", "af_nova")
     tts_api_key = os.getenv("TTS_API_KEY", "no-key-needed")
@@ -116,7 +110,7 @@ async def my_agent(ctx: JobContext) -> None:
         stt_model,
         llama_base_url,
         llama_model,
-        tts_base_url,
+        tts_provider,
     )
 
     wake_word = os.getenv("WAKE_WORD", "").strip().lower() in {"1", "true", "yes", "on"}
@@ -142,17 +136,19 @@ async def my_agent(ctx: JobContext) -> None:
     else:
         stt = openai.STT(base_url=stt_base_url, model=stt_model, api_key=stt_api_key)
 
-    session = AgentSession(
-        stt=stt,
-        llm=openai.LLM(base_url=llama_base_url, model=llama_model, api_key=llama_api_key),
-        # The model name selects the wire protocol the openai TTS plugin uses:
-        # only {"tts-1", "tts-1-hd"} use the raw-audio-bytes stream that the
-        # Kokoro server speaks. Any other name (e.g. "kokoro") routes the plugin
-        # into the gpt-4o-mini-tts SSE reader, which parses Kokoro's binary audio
-        # body as text, pushes zero frames, and raises "no audio frames were
-        # pushed". Kokoro ignores the model field, so "tts-1" is purely a
-        # protocol selector here.
-        tts=openai.TTS(
+    if tts_provider == "fish-audio":
+        from livekit.plugins.fishaudio import TTS as FishAudioTTS
+
+        tts = FishAudioTTS(
+            api_key=tts_api_key,
+            voice_id=tts_voice,
+            model=fish_tts_model,
+            latency_mode="balanced",
+        )
+    elif tts_provider in {"kokoro", "kokoro-onnx"}:
+        # Kokoro uses the raw-audio protocol selected by "tts-1"; it ignores
+        # the model name itself.
+        tts = openai.TTS(
             base_url=tts_base_url,
             model="tts-1",
             voice=tts_voice,
@@ -160,7 +156,14 @@ async def my_agent(ctx: JobContext) -> None:
             # Raw PCM lets the ONNX server deliver playable chunks without
             # buffering a complete WAV or MP3 response first.
             response_format="pcm" if tts_provider == "kokoro-onnx" else "mp3",
-        ),
+        )
+    else:
+        raise ValueError(f"Unsupported TTS_PROVIDER: {tts_provider}")
+
+    session = AgentSession(
+        stt=stt,
+        llm=openai.LLM(base_url=llama_base_url, model=llama_model, api_key=llama_api_key),
+        tts=tts,
         turn_detection=_turn_detection_mode(),
         vad=session_vad,
         preemptive_generation=True,
